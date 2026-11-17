@@ -57,3 +57,15 @@ Running journal, raw material for the final `AI_USAGE.md`. Append as we go; don'
 ### 8. Failure: forwards classified as quoted replies (Task 1)
 - Found in random 20-record spot-check: Outlook writes `-----Original Message-----` for forwards too (`FW: El Paso 1110` landed in quoted_content), and AOL forwards embed raw headers with no separator (`Fwd: Diplomatic Nominations` not split at all).
 - Fix: ambiguous markers (Original Message, From/Sent, embedded header block) classified by subject prefix (`FW:`/`Fwd:` -> forwarded, else quoted). forwarded_content rose from 8.5% to 14.6%.
+
+### 9. Git setup: commit history that follows the real work order (Task 0/1)
+- Prompt (quote): "yes we can setup our git repo since it will better to see multiple commit history, let's do it" and "name it AISH Assignment".
+- What the AI did: scanned the tree before the first commit (no personal email, no local paths, no secrets, no long dashes), kept the original brief docx out of git, then split the work so far into 5 commits in the order it was built (repo setup, spec, dataset, parser, extraction). Created a private GitHub repo only after asking.
+- Bug found on the way: `Path.write_text` on Windows writes CRLF, so `error_log.txt` had mixed line endings. Fixed by writing with `newline="\n"` and adding `.gitattributes`.
+- Who: repo name, visibility and commit cadence = me; checks + commits = AI.
+
+### 10. Task 2 design: insert strategy and verifying the AI's own claims (Task 2)
+- Decision (mine): separate `addresses` lookup table, chosen from two schema previews the AI showed side by side.
+- AI choice worth noting: `ON CONFLICT (message_id) DO NOTHING` instead of the common `INSERT OR IGNORE`, because OR IGNORE also silently drops rows that break NOT NULL or CHECK constraints, which would hide loader bugs. Reruns also never touch existing rows, so notification state survives and a rerun cannot re-send email.
+- Self-check: while writing the expected output for a sample query, the AI claimed two "Summer Interns" rows were the same email, then noticed their timestamps were 5 hours apart. It opened both raw files before keeping the claim: bodies identical, two different mailboxes, and the raw Date headers themselves differ by 5 hours (source data artifact, not a parser bug). That fed into the Task 3 notes.
+- Verification beyond tests: recipient row counts per kind and distinct address count were recomputed from the parsed records and matched the DB exactly; `EXPLAIN QUERY PLAN` used to confirm the required indexes are actually used.
