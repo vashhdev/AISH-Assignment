@@ -1,0 +1,5 @@
+# Date parsing fallback for timezone abbreviations and odd formats
+python-dateutil==2.9.0.post0
+
+# Tests
+pytest==8.3.4
