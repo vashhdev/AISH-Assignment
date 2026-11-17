@@ -1,0 +1,28 @@
+# Dataset (large, downloaded on demand)
+data/
+
+# Secrets: OAuth keys, tokens, env, real MCP config
+.env
+mcp_config.json
+gcp-oauth.keys.json
+credentials.json
+*.keys.json
+token*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Local database
+*.db
+*.sqlite
+*.sqlite3
+
+# Office lock files
+~$*
+
+# Original assignment brief (content lives in spec/)
+R2 - Take Home Assignment.docx
