@@ -1,0 +1,115 @@
+{
+ "generated_at": "2026-11-17T03:45:52+00:00",
+ "total_files": 23554,
+ "parsed": 22352,
+ "failed": 1202,
+ "success_rate": 0.949,
+ "failure_reasons": {
+  "missing To": 1171,
+  "placeholder Date": 32,
+  "invalid From": 1
+ },
+ "dropped_address_tokens": 10,
+ "field_completeness": {
+  "message_id": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "mandatory"
+  },
+  "date": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "mandatory"
+  },
+  "from_address": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "mandatory"
+  },
+  "to_addresses": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "mandatory"
+  },
+  "subject": {
+   "filled": 19982,
+   "rate": 0.894,
+   "kind": "mandatory"
+  },
+  "body": {
+   "filled": 20607,
+   "rate": 0.9219,
+   "kind": "mandatory"
+  },
+  "source_file": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "mandatory"
+  },
+  "cc_addresses": {
+   "filled": 4651,
+   "rate": 0.2081,
+   "kind": "optional"
+  },
+  "bcc_addresses": {
+   "filled": 4651,
+   "rate": 0.2081,
+   "kind": "optional"
+  },
+  "x_from": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "optional"
+  },
+  "x_to": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "optional"
+  },
+  "x_cc": {
+   "filled": 4678,
+   "rate": 0.2093,
+   "kind": "optional"
+  },
+  "x_bcc": {
+   "filled": 13,
+   "rate": 0.0006,
+   "kind": "optional"
+  },
+  "x_folder": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "optional"
+  },
+  "x_origin": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "optional"
+  },
+  "content_type": {
+   "filled": 22352,
+   "rate": 1.0,
+   "kind": "optional"
+  },
+  "has_attachment": {
+   "filled": 4540,
+   "rate": 0.2031,
+   "kind": "optional"
+  },
+  "forwarded_content": {
+   "filled": 3259,
+   "rate": 0.1458,
+   "kind": "optional"
+  },
+  "quoted_content": {
+   "filled": 5399,
+   "rate": 0.2415,
+   "kind": "optional"
+  },
+  "headings": {
+   "filled": 3183,
+   "rate": 0.1424,
+   "kind": "optional"
+  }
+ }
+}
