@@ -4,5 +4,8 @@ python-dateutil==2.9.0.post0
 # Fuzzy text similarity for duplicate detection (MIT)
 rapidfuzz==3.14.6
 
+# MCP client (spawns the Gmail MCP server over stdio)
+mcp==2.3.0
+
 # Tests
 pytest==8.3.4
