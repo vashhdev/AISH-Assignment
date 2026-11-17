@@ -1,7 +1,7 @@
 # Task 3: Duplicate Detection & Flagging
 
 Depends on: Task 2 DB.
-Status: Not started.
+Status: Done (2026-11-16). All acceptance items pass. Code: `enron_pipeline/dedup.py` (rules in its docstring), `tests/test_dedup.py`, sample queries Q10-Q12.
 
 ## Definition of a duplicate (spec)
 Two or more emails are duplicates if they share:
@@ -21,27 +21,42 @@ Among a set of duplicates, the email with the **latest** timestamp is the duplic
 | T3.5 | Log stats: total groups found, total emails flagged, average group size. |
 
 ## Outputs
-- DB flags updated (`is_duplicate`, `duplicate_of`).
-- `duplicates_report.csv` (one row per flagged email).
-- Stats logged.
+- DB flags updated (`is_duplicate`, `duplicate_of`, plus `similarity_score`).
+- `duplicates_report.csv` at repo root (one row per flagged email, grouped by original).
+- Stats printed, logged and saved to `output/dedup_stats.json`.
+
+## Decisions (2026-11-16, with user)
+| Topic | Rule |
+|---|---|
+| Text compared | Sender's own body, whitespace-normalized. If empty (pure forward/reply), the full text (body + forwarded + quoted). Body-only would form 311 groups purely from two empty bodies; full text lets shared quoted threads push different replies over 90%. |
+| Metric | `rapidfuzz.fuzz.ratio` 3.14.6 (MIT), threshold >= 90. `token_sort_ratio` gave nearly the same result (8,467 vs 8,484 flagged). |
+| Subject normalization | Strip leading stacked `re`/`fw`/`fwd` prefixes (any case, optional `[n]`, spaces before the colon), collapse whitespace, casefold. |
+| Clustering | Block by (from_address, normalized subject). Anchor clustering in original-first order; each email joins the group whose original it matches best at >= 90%; score reported against the original. |
+| Tie-break (equal dates, 96% of groups) | `(date, folder rank, source_file)`. Folder rank: sent folders (`sent`, `_sent`, `_sent_mail`, `sent_items`) < inbox (`inbox`, `notes_inbox`) < user folders < Lotus views (`all_documents`, `discussion_threads`) < `deleted_items`. |
+| Short texts | Follow the rule as written (68 short-text pairs flagged). Documented as a limitation. |
+| Reruns | Clear all duplicate flags, recompute. Notification state untouched. |
 
 ## Acceptance checklist
-- [ ] Subject normalization strips stacked/mixed prefixes (`Re:`, `RE:`, `Fwd:`, `FW:`, `Fw:`, `Re: Re:` ...), case-insensitive, whitespace-trimmed.
-- [ ] Similarity computed with a recognized fuzzy library; threshold >= 90 enforced.
-- [ ] In every group exactly one email (the earliest) has `is_duplicate = 0`; all others have `is_duplicate = 1` and `duplicate_of` pointing to the earliest.
-- [ ] Tie-break for identical timestamps is deterministic and documented.
-- [ ] CSV has exactly the 7 columns in spec order, one row per flagged email.
-- [ ] Stats logged: groups, flagged, average group size.
-- [ ] Manual check of ~10 groups: they really are duplicates. A few near-misses (85-90%) are correctly excluded.
-- [ ] Re-running detection is idempotent (resets flags first, gives the same result).
+- [x] Subject normalization strips stacked/mixed prefixes, case-insensitive, whitespace-trimmed (7 parametrized cases incl. `re[2]:`, `Fwd :`, `Regarding:` kept, mid-subject `re:` kept).
+- [x] Recognized fuzzy library (rapidfuzz), threshold enforced: real data min flagged score 90.0, max 100; recomputing all 8,484 scores matches stored values (max diff 0.005, rounding).
+- [x] Every group has exactly one unflagged original: 0 originals flagged, 0 flagged rows without `duplicate_of`; all 8,484 pairs share sender + normalized subject, and the original sorts strictly earlier.
+- [x] Tie-break deterministic and documented (module docstring + table above); test proves the `sent` copy beats the `all_documents` copy at the same timestamp.
+- [x] CSV has exactly the 7 columns in spec order, 8,484 rows = flagged count in DB.
+- [x] Stats logged: 3,939 groups, 8,484 flagged, average group size 3.15 (also Q10 in SQL).
+- [x] Manual check: 10 random groups are real duplicates (folder copies, re-sent forwards, a marketing re-send 4 minutes later). 73 near-miss pairs at 85-90 inspected by sample: different expense-report owners, different short BlackBerry notes with the same signature. Correctly excluded.
+- [x] Rerun is idempotent: identical CSV hash and identical DB flags on the real data; test also proves stale flags are cleared and `notification_sent` survives.
+
+## Results (final run)
+- 22,352 emails scanned, 3,668 candidate blocks, 3,939 groups, 8,484 flagged (7,980 at 100, 504 at 90-99.99), average group size 3.15, largest 28.
+- Per mailbox flagged: allen-p 59.6%, arnold-j 51.3%, lay-k 39.5%, skilling-j 44.4%, kitchen-l 7.7%. Lotus Notes mailboxes store each email in several folders; Outlook-only kitchen-l does not.
+- Runtime about 1.5 s for detection.
+
+## Known limitations (for README)
+- Templated automatic mail is flagged when only a number or name changes: overdue reminders ("5 days" vs "55 days"), weekly deal reports for consecutive weeks, mail-merge greetings ("Kenneth:" vs "Jeffrey:"). Fuzzy body similarity cannot tell these from re-sends; the brief's rule flags them.
+- Short messages with a long shared signature score high on the signature alone; different short notes can approach the threshold (seen at 86-88%).
+- 68 flagged pairs have under 40 characters of text (e.g. a one-line note sent twice two weeks apart, blank subject).
+- Source timestamps: many copies of the same email differ by exactly 10 or 12 hours across folders (timezone artifact in the dataset); "latest" follows those raw timestamps.
+- Recipients are not part of the rule, so the same note sent separately to different people is a duplicate group.
 
 ## Open decisions
-- Which text is compared: primary `body` only, or body + forwarded/quoted? Spec says "body content". Proposal: primary body; fall back to full text when the primary body is empty.
-- Similarity metric: `rapidfuzz.fuzz.ratio` (strict, order-aware) vs `token_sort_ratio`. Proposal: `ratio` on whitespace-normalized text.
-- Non-transitive similarity (A~B, B~C, but A not ~C). Proposal: anchor clustering. Sort by date; each email joins the first earlier group whose original it matches at >= 90%, otherwise it starts a new group. Reported score = similarity vs the original.
-- Tie-break for equal dates. Proposal: `(date, message_id)` or `(date, source_file)`.
-- Empty bodies: two empty bodies score 100%. Include or exclude?
-
-## Our notes
-- Blocking: group by `(from_address, normalized_subject)` first, fuzzy-compare only inside each block. Keeps it fast.
-- Expect many groups caused by the same email living in several folders (`01_OVERVIEW.md` gotcha 2). That is legit under the spec's definition, but worth calling out in README.
+- None. For Task 4: 8,484 flagged emails in 3,939 groups. "Latest" per group = last member in `sort_key` order (`DuplicateGroup.latest`).

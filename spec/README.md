@@ -30,6 +30,6 @@ Deadline: 1 day from receipt.
 | 0 | Spec split + architecture decisions | Done | D1, D2, D6, D9 decided. D3 (MCP server), D7 (mailboxes), D8 (output paths) deferred to their tasks. Spec verified against docx. |
 | 1 | Data extraction pipeline | Done | 22,352 / 23,554 parsed (94.9%), 1,202 logged failures, 30 tests. OAuth keys for Task 4 in `~/.gmail-mcp/` (Desktop app type, verified). |
 | 2 | Database storage | Done | SQLite `output/enron.db`: 22,352 emails, 11,739 addresses, 164,473 recipient links. Idempotent reload. 9 sample queries verified. 37 tests. |
-| 3 | Duplicate detection & flagging | Not started | |
+| 3 | Duplicate detection & flagging | Done | 3,939 groups, 8,484 flagged, avg group size 3.15. `duplicates_report.csv` at root. Idempotent. 50 tests. |
 | 4 | MCP notification emails | Not started | |
 | 5 | Docs + deliverables wrap-up | Not started | README.md, AI_USAGE.md, final checklist |
