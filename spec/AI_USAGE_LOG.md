@@ -1,0 +1,59 @@
+# AI Usage Log (raw notes)
+
+Running journal, raw material for the final `AI_USAGE.md`. Append as we go; don't polish.
+
+## Entry format
+```
+### <n>. <short title> (<task>)
+- Prompt (quote or summary):
+- Why structured this way:
+- What the AI produced:
+- Worked first time? If not: what broke, how fixed (prompt refinement vs manual edit):
+- Who wrote what:
+```
+
+## Entries
+
+### 1. Splitting the spec into per-task context files (Task 0)
+- Prompt (summary): convert the assignment .docx into separate markdown files (overview, rules, one per task, the email template, deliverables) so each task can be worked on with only its own spec in context, and verified against its expected output before moving on. Asked the AI to raise architecture questions instead of deciding alone.
+- Why structured this way: smaller, focused context per task (cheaper and less distraction), human stays in the loop on architecture, enforces a build -> check -> iterate loop.
+- What the AI produced: `spec/` folder with acceptance checklists per task, an architecture decision log, and a list of dataset gotchas.
+- Worked first time: (fill after review)
+- Who wrote what: workflow and file-split idea = me; file content = AI, reviewed by me.
+
+### 2. Verifying the spec split against the original doc (Task 0)
+- Prompt (quote): "Also check all the files that we create against the original one so that we can make sure that we don't miss anything from the original doc."
+- Why: AI summaries can silently drop requirements; a split spec is only useful if it is complete.
+- What the AI did: converted the docx to plain text, wrote a small script that splits it into 148 sentences/table cells and finds the best-matching window in the spec files by token overlap, then flagged anything under 85% coverage for manual review. Also inspected docx headers, footers, footnotes and comments for hidden content (none).
+- Result: 49 flagged on first pass. 4 real gaps fixed (allowed AI tool list, "representative subset" + "entire dataset not required", doc title/goal framing, "understand how you collaborate" line). Remaining 42 were paraphrase only.
+- Who wrote what: the check request = me; script + review = AI.
+
+### 3. Vetting the Gmail MCP server before committing to it (Task 4 prep)
+- Prompt (summary): "this is what I found from my research ... GongRzhe/Gmail-MCP-Server, check if this is good and won't give any issues going forward, or we can choose something else later on together."
+- Why: a bad MCP server choice found late would be costly on a 1-day deadline.
+- What the AI did: pulled repo metadata via `gh api` (found it archived), read `send_email` schema and MIME builder in source, downloaded the published npm 1.1.11 build to confirm it matches source (it sets `References` via `inReplyTo`, contradicting open issue #66), checked the MCP protocol version of its SDK (`2024-11-05`) against the Python `mcp` 2.3.0 client's supported list, scanned top open issues (found #96: Claude Code passes arrays as strings).
+- Result: keep it, pinned to 1.1.11, with mitigations; fallback = custom FastMCP server. Details in `TASK_4_MCP_NOTIFY.md`.
+- Who wrote what: server pick = me; verification = AI.
+
+### 4. Profile the data before writing the parser (Task 1)
+- Approach: before any parser code, the AI streamed the tarball to count all 150 mailboxes (found every one of 517,401 files ends in `.`, which Windows drops), then profiled the chosen 23,554 files: header presence, date shapes, encodings, address oddities, body marker frequencies.
+- Why: parser rules and the "what counts as a failure" decisions were made from real counts (1,171 missing To, 2,394 blank subjects, 32 placeholder dates, Bcc always equal to Cc) instead of guesses. I made the 4 policy calls with those numbers in front of me.
+- Who: decisions = me; profiling scripts = AI.
+
+### 5. Failure: profiler crashed on `Header` objects (Task 1)
+- What broke: `TypeError: argument of type 'Header' is not iterable`. Python's `email` package returns `email.header.Header` objects instead of `str` when a header has non-ASCII bytes (8 files).
+- Fix: parser splits header/body at byte level, decodes headers itself (UTF-8 -> cp1252 -> latin-1) and parses the decoded string, so every header is a `str`.
+
+### 6. Failure: unit test caught silent wrong timezone (Task 1)
+- What broke: `CEST` date came back 2 hours off. `email.utils.parsedate_to_datetime` does not raise on unknown abbreviations; it returns a naive datetime, which the first version labelled UTC.
+- Fix: naive result -> re-parse with `dateutil` + explicit abbreviation table; still unknown -> fail with "unknown timezone" instead of guessing. Added a test for it.
+- Lesson: the AI's first version looked right and the real data never hits this case; only a deliberately chosen test case exposed it.
+
+### 7. Iteration: headings heuristic, two rounds on real output (Task 1)
+- Round 1 output had filenames (`<<X20292.DOC>>`), separators read as underlines ("Leslie" + long dash line) and sentences.
+- Round 2 top-60 list was dominated by `[IMAGE]` (365x) and salutations (`Jeff:`, `Dear Mr. Skilling:`).
+- Fixes: underline must be 0.5x-1.5x the text length, skip file references, list lines, tab rows, salutations, and label lines that open a message; strip `[IMAGE]` placeholders. Regression test added with each noise case.
+
+### 8. Failure: forwards classified as quoted replies (Task 1)
+- Found in random 20-record spot-check: Outlook writes `-----Original Message-----` for forwards too (`FW: El Paso 1110` landed in quoted_content), and AOL forwards embed raw headers with no separator (`Fwd: Diplomatic Nominations` not split at all).
+- Fix: ambiguous markers (Original Message, From/Sent, embedded header block) classified by subject prefix (`FW:`/`Fwd:` -> forwarded, else quoted). forwarded_content rose from 8.5% to 14.6%.
