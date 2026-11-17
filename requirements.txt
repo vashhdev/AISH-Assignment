@@ -1,5 +1,8 @@
 # Date parsing fallback for timezone abbreviations and odd formats
 python-dateutil==2.9.0.post0
 
+# Fuzzy text similarity for duplicate detection (MIT)
+rapidfuzz==3.14.6
+
 # Tests
 pytest==8.3.4
