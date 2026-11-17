@@ -40,4 +40,4 @@ Spec: "We want to understand how you collaborate with AI tools, not just see the
 - [x] No em/en dashes in the repo (grep over all tracked files, drafts included).
 - [x] AI_USAGE.md covers all 6 sections above.
 - [x] `requirements.txt` installs clean in a fresh venv (Python 3.11.9); 65 tests pass there.
-- [ ] Repo shared as instructed (private GitHub repo `AISH-Assignment`; sharing step is the user's).
+- [x] Repo shared: GitHub repo `AISH-Assignment` made public on 2026-11-17 for review (to be made private again after the interview).
