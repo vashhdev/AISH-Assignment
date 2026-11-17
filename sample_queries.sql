@@ -3,7 +3,7 @@
 -- Run all of them with:   python -m enron_pipeline.queries
 -- or one at a time with any SQLite client.
 --
--- Expected outputs below were recorded on the 5-mailbox subset
+-- Expected outputs below were recorded on the 5-mailbox subset after a full `python main.py` run
 -- (lay-k, skilling-j, kitchen-l, arnold-j, allen-p): 22,352 emails loaded.
 -- Dates are ISO 8601 UTC text, so ranges are plain string comparisons that use idx_emails_date.
 
@@ -127,3 +127,45 @@ SELECT
            WHERE c.email_id = b.email_id AND c.kind = 'cc'
              AND c.position = b.position AND c.address_id = b.address_id
        )) AS bcc_rows_not_matching_cc;
+
+
+-- Q10. Duplicate detection summary (after `python main.py` has run duplicate detection).
+-- Expected output: 1 row: groups 3939, flagged 8484, avg_group_size 3.15
+--   (same numbers as output/dedup_stats.json; group size counts the original plus its duplicates).
+SELECT COUNT(DISTINCT duplicate_of) AS groups,
+       COUNT(*) AS flagged,
+       ROUND((COUNT(*) + COUNT(DISTINCT duplicate_of)) * 1.0 / COUNT(DISTINCT duplicate_of), 2) AS avg_group_size
+FROM emails
+WHERE is_duplicate = 1;
+
+
+-- Q11. Largest duplicate groups: each original with how many emails were flagged as its duplicates.
+-- Expected output: 5 rows (from_address, subject, original_date, duplicates, latest_duplicate). First row:
+--   arsystem@mailman.enron.com, "Your Approval is Overdue: Access Request for matt.smith@enron.com",
+--   2001-10-18T00:33:15Z, 27 duplicates, latest 2002-01-02T01:19:40Z (a daily automated reminder).
+--   Row 2 is john.arnold@enron.com with a blank subject: one market note sent 4 times within an hour,
+--   each copy stored in several folders, 18 duplicates.
+SELECT o.from_address, o.subject, o.date AS original_date,
+       COUNT(*) AS duplicates, MAX(d.date) AS latest_duplicate
+FROM emails AS d
+JOIN emails AS o ON o.message_id = d.duplicate_of
+WHERE d.is_duplicate = 1
+GROUP BY d.duplicate_of
+ORDER BY duplicates DESC, original_date
+LIMIT 5;
+
+
+-- Q12. Share of each mailbox flagged as duplicate.
+-- Expected output: 5 rows (mailbox, emails, flagged, pct_flagged):
+--   allen-p 2961/1765 59.6, arnold-j 4756/2442 51.3, kitchen-l 5304/406 7.7,
+--   lay-k 5593/2211 39.5, skilling-j 3738/1660 44.4.
+--   kitchen-l is an Outlook-only mailbox. The other four have Lotus Notes folders
+--   (all_documents, discussion_threads, sent + _sent_mail) that store the same email several
+--   times, which is where most duplicates come from.
+SELECT substr(source_file, 9, instr(substr(source_file, 9), '/') - 1) AS mailbox,
+       COUNT(*) AS emails,
+       SUM(is_duplicate) AS flagged,
+       ROUND(100.0 * SUM(is_duplicate) / COUNT(*), 1) AS pct_flagged
+FROM emails
+GROUP BY mailbox
+ORDER BY mailbox;
