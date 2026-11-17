@@ -1,0 +1,15 @@
+{
+ "generated_at": "2026-11-17T03:53:46Z",
+ "records_in": 22352,
+ "inserted": 22352,
+ "already_in_db": 0,
+ "exact_duplicates": 0,
+ "recipient_rows": 164473,
+ "new_addresses": 11739,
+ "totals": {
+  "emails": 22352,
+  "addresses": 11739,
+  "email_recipients": 164473
+ },
+ "exact_duplicate_examples": []
+}
