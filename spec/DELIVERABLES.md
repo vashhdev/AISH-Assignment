@@ -33,11 +33,11 @@ Spec: "We want to understand how you collaborate with AI tools, not just see the
 - Also required elsewhere in the spec: which mailboxes were chosen and why, fuzzy library choice. Worth adding: headings heuristic, duplicate tie-break rules.
 
 ## Final submission checklist
-- [ ] Single command runs everything end to end in dry-run on a fresh clone (after dataset download).
-- [ ] All 11 deliverable items present at the expected paths.
-- [ ] No secrets anywhere in git history.
-- [ ] No dataset files committed.
-- [ ] No em/en dashes in the repo (grep).
-- [ ] AI_USAGE.md covers all 6 sections above.
-- [ ] `requirements.txt` installs clean in a fresh venv.
-- [ ] Repo shared as instructed.
+- [x] Single command runs everything end to end in dry-run on a fresh clone: cloned HEAD into an empty folder, new venv, `python main.py` (tarball copied in to skip the download; extraction ran) -> same counts in about 40 s, exit 0. `duplicates_report.csv` byte-identical to the committed one; other outputs differ only in timestamps.
+- [x] All 11 deliverable items present at the expected paths (checked with `git ls-files`; 8,484 drafts in `output/replies/`).
+- [x] No secrets anywhere in git history: full `git log -p` scanned for OAuth client secrets, tokens and the client ID; no `.env`, keys, token or real `mcp_config.json` ever committed.
+- [x] No dataset files committed (0 files under `data/`).
+- [x] No em/en dashes in the repo (grep over all tracked files, drafts included).
+- [x] AI_USAGE.md covers all 6 sections above.
+- [x] `requirements.txt` installs clean in a fresh venv (Python 3.11.9); 65 tests pass there.
+- [ ] Repo shared as instructed (private GitHub repo `AISH-Assignment`; sharing step is the user's).

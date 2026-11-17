@@ -92,3 +92,8 @@ Running journal, raw material for the final `AI_USAGE.md`. Append as we go; don'
 - Prompt (verbatim): "Use the gmail MCP server's send_email tool to send the duplicate notice in output/replies/348269.1075840857152.JavaMail.evans@thyme.eml to <my-gmail> instead of the Enron address in its To header. Keep the subject and body exactly as in the file, and pass the file's References value as inReplyTo."
 - Why structured this way: points at a generated draft so the content is the pipeline's, not invented by the AI; names the tool explicitly; overrides the recipient explicitly (safety); asks for exact subject/body; maps the template's References header to the tool's `inReplyTo` parameter.
 - Result: the AI read the .eml, loaded the tool, and called `send_email` with `to` as a real array, the exact subject/body and `inReplyTo`. Server replied "Email sent successfully with ID: 1a1e7ebb98bf2fec". Worked first time; the known issue #96 (arrays passed as strings) did not occur.
+
+### 14. Task 5: documentation and final verification (Task 5)
+- Prompt (summary): agreed the work split estimate (about 15-20% me, 80-85% AI), then "let's go" for the docs.
+- What the AI did: built README.md and AI_USAGE.md from the per-task spec files and this log, then ran the final checklist instead of assuming it: a fresh clone of HEAD in an empty folder with a new venv reproduced every output (duplicates report byte-identical), a full-history secret scan, a dash scan, and a check that Claude is named only where agreed (D6).
+- Caught in that check: `.gitignore` named the local Claude Code settings path. Moved the rule to `.git/info/exclude`, which works the same but is not committed.
