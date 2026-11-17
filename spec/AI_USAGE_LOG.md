@@ -76,3 +76,19 @@ Running journal, raw material for the final `AI_USAGE.md`. Append as we go; don'
 - Found by the AI while checking folder names: `_sent` is a fourth sent-folder name (261 emails) that the first draft of the priority list missed.
 - Manual review beyond the checklist: sampled flagged pairs in the 90-99 band with different timestamps and found templated automated mail (overdue reminders, weekly reports, mail-merge greetings) flagged under the brief's rule. Kept the rule, documented as a limitation instead of silently changing the definition.
 - Small slip: a scripted edit inserted the rapidfuzz pin under the dateutil comment in requirements.txt; caught on read-back and rewritten.
+
+### 12. Task 4: MCP client in the pipeline, verified against the server's real behaviour (Task 4)
+- Decisions (mine): literal template subject (keeps `Re: Re:`), commit all 8,484 drafts, live sends in report order, commit send_log.csv as-is.
+- Smoke test before any code: the AI wrote a 15-line Python MCP client, spawned the pinned server over stdio and listed its tools (19, `send_email` schema as researched) before the OAuth sign-in existed.
+- Found by reading the published server code, not the README: errors come back as ordinary text (`Error: ...`) without the MCP `isError` flag. A client that trusted `isError` would have logged failed sends as sent and marked them notified. Fixed by requiring the `Email sent successfully` prefix; a stand-in MCP server in the tests replies the same way, so the real client code path (stdio, handshake, tool call) is tested without Gmail.
+- Failure on the way: the test server first used `FastMCP`, which `mcp` 2.x renamed to `MCPServer`; the import error message named the fix.
+- Safety designed in, not bolted on: live recipient from `.env` only, refused for @enron.com or any address in the DB, `--limit` cap, DB marked only after a confirmed send. First live run used `--limit 1`; I checked the received email and its headers ("Show original": In-Reply-To and References correct) before sending 4 more.
+- Sign-in: I ran `npx -y @gongrzhe/server-gmail-autoauth-mcp@1.1.11 auth` myself; the token stays in `~/.gmail-mcp/`, outside the repo.
+- Small slip: one long shell heredoc for the doc updates failed to parse; moved the edit script into a file and reran.
+- Who: decisions, OAuth setup, inbox checks = me; client code, tests, server-code reading = AI.
+
+### 13. Prompting Claude Code to use the MCP send_email tool directly (Task 4)
+- Setup: `claude mcp add gmail --scope local -- npx -y @gongrzhe/server-gmail-autoauth-mcp@1.1.11`, then `.claude/settings.local.json` denying the 18 non-send Gmail tools, so `send_email` is the only usable one (it still asks for approval each time). Session restarted so the new server was loaded.
+- Prompt (verbatim): "Use the gmail MCP server's send_email tool to send the duplicate notice in output/replies/348269.1075840857152.JavaMail.evans@thyme.eml to <my-gmail> instead of the Enron address in its To header. Keep the subject and body exactly as in the file, and pass the file's References value as inReplyTo."
+- Why structured this way: points at a generated draft so the content is the pipeline's, not invented by the AI; names the tool explicitly; overrides the recipient explicitly (safety); asks for exact subject/body; maps the template's References header to the tool's `inReplyTo` parameter.
+- Result: the AI read the .eml, loaded the tool, and called `send_email` with `to` as a real array, the exact subject/body and `inReplyTo`. Server replied "Email sent successfully with ID: 1a1e7ebb98bf2fec". Worked first time; the known issue #96 (arrays passed as strings) did not occur.

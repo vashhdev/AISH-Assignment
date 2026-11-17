@@ -1,7 +1,7 @@
 # Task 4: Send Notification Emails via MCP
 
 Depends on: Task 3 flags, `EMAIL_TEMPLATE.md`.
-Status: Not started.
+Status: Done (2026-11-17). All acceptance items pass. Code: `enron_pipeline/notify.py`, `main.py --send-live --limit N`, `tests/test_notify.py` + `tests/fake_gmail_mcp.py`, `mcp_config.json.example`, `gcp-oauth.keys.json.example`, `.env.example`.
 
 Spec intent: configure and use a Gmail MCP server to actually send duplicate notification emails from the pipeline to an email address (preferably our own Gmail). Tests our ability to integrate external services with AI-assisted tooling.
 
@@ -35,15 +35,40 @@ Spec intent: configure and use a Gmail MCP server to actually send duplicate not
 - DB columns `notification_sent` and `notification_date` exist (schema requirement); update them after successful sends.
 
 ## Acceptance checklist
-- [ ] Gmail MCP server runs locally and is registered with the AI tool; `send_email` tool is visible.
-- [ ] `mcp_config.json.example` committed; real config + credentials gitignored.
-- [ ] Dry-run writes one `.eml` per flagged duplicate into `output/replies/`, each matching the template exactly.
-- [ ] `--send-live` sends through MCP `send_email`, respecting the recipient policy and cap (D2).
-- [ ] At least one live email received in our Gmail; screenshot / log excerpt saved for AI_USAGE.md.
-- [ ] `output/send_log.csv` has one row per attempt with the 5 columns; failures included with error text.
-- [ ] `notification_sent = 1` and `notification_date` set only on successful sends; a re-run skips already-notified groups.
-- [ ] Send failures (bad token, network) are logged, not crashes.
-- [ ] Example prompts used to drive the MCP `send_email` tool captured in `AI_USAGE_LOG.md`.
+- [x] Gmail MCP server runs locally and is registered with Claude Code (`claude mcp add gmail --scope local ...`, status Connected); `send_email` visible and used from a prompt.
+- [x] `mcp_config.json.example` (+ `gcp-oauth.keys.json.example` with REDACTED values, `.env.example`) committed; real config, keys, token and `.env` gitignored or outside the repo.
+- [x] Dry run writes one `.eml` per flagged duplicate: 8,484 files in `output/replies/`. Body tested against the literal template text; headers To/Subject/Date/References, unfolded.
+- [x] `--send-live` sends through MCP `send_email`, only to `NOTIFY_LIVE_TO`, refused for @enron.com or any dataset address, capped by `--limit` (default 5, max 50).
+- [x] Live email received in our Gmail; screenshot `docs/images/live_send_gmail.png`. "Show original" confirmed `In-Reply-To` and `References` = the flagged Message-ID.
+- [x] `output/send_log.csv`: one row per attempt; the 5 required columns first, plus `intended_recipient`, `flagged_message_id`. Failure rows with error text proven in tests.
+- [x] `notification_sent` / `notification_date` set only after the server confirms; real rerun picked the next 4 groups; tests prove failed sends are retried and sent ones skipped.
+- [x] Failures logged, not raised: server that cannot start, server error text, timeouts (tests with a stand-in MCP server over real stdio).
+- [x] Example prompts captured in `AI_USAGE_LOG.md` (entries 12-13).
+
+## Results (2026-11-17)
+- Pipeline live runs: `--limit 1` then `--limit 4`: 5 attempted, 5 sent, 0 failed. Intended recipients: jan_levine@travisintl.com, markskilling@hotmail.com (3), sherri.reinartz@enron.com.
+- Prompt-driven send from Claude Code: 1 sent (Summer Interns notice), first try. Not in `send_log.csv` or the DB on purpose: that log covers pipeline live mode only.
+
+## Decisions (2026-11-16/17, with user)
+| Topic | Rule |
+|---|---|
+| D3 server | GongRzhe 1.1.11 confirmed by smoke test: Python `mcp` 2.3.0 handshake on protocol 2024-11-05, 19 tools, `send_email` schema as researched. |
+| Subject | Literal template: `[Duplicate Notice] Re: <original subject as stored>`, even when that gives `Re: Re:` (1,383 groups) or a trailing `Re: ` (468). |
+| Date values | RFC 2822 in UTC (`Wed, 26 Jul 2000 10:46:00 +0000`) for `Date:` and both `Date Sent:` lines. |
+| Similarity | Two decimals, same as `duplicates_report.csv`. |
+| Drafts | All 8,484 committed (about 7 MB on disk, under 2 MB in git). Regenerated each run; only the Date header changes. |
+| Live order | Report order, skipping notified groups. |
+| send_log.csv | Committed as-is with the real live recipient (user's choice). |
+| Claude Code | Local-scope registration; `.claude/settings.local.json` denies the 18 other Gmail tools; `send_email` stays on ask. |
+
+## Issues hit and fixes (for AI_USAGE.md T4.8)
+1. Server reports failures as a normal text result (`Error: ...`) without the MCP `isError` flag (read in the published `dist/index.js`). Fix: success only when the text starts with `Email sent successfully`. A test server reproduces this.
+2. Server starts and lists tools without any OAuth token; auth problems only surface at send time. So "handshake OK" is not "can send"; the first live run used `--limit 1`.
+3. `mcp` 2.x renamed FastMCP to `MCPServer` (`from mcp.server.mcpserver import MCPServer`); the first import attempt for the test server failed with the migration message.
+4. Requested scopes are broad (`gmail.modify`, `gmail.settings.basic`). Mitigated: pipeline calls only `send_email`; Claude Code denies the other 18 tools.
+5. A server added with `claude mcp add` is not visible in a Claude Code session that was already running; the session had to be restarted (`claude --continue`).
+6. Issue #96 (arrays sent as strings from Claude Code) did not occur with Claude Code 2.1.326.
+7. Sign-in shows Google's "app not verified" screen for a personal OAuth client; expected, continue via Advanced.
 
 ## D3 research: GongRzhe/Gmail-MCP-Server (checked 2026-11-16)
 Candidate from user: https://github.com/GongRzhe/Gmail-MCP-Server (npm `@gongrzhe/server-gmail-autoauth-mcp`).
@@ -68,8 +93,4 @@ Mitigations if we keep it:
 Fallback: custom Python MCP server (FastMCP) exposing `send_email` with `gmail.send` scope only, full header control (`Date`, `References`), modern protocol. ~100 lines. Spec explicitly allows "build a custom one".
 
 ## Open decisions
-- D1: decided, see `01_OVERVIEW.md`.
-- D2: decided, see `01_OVERVIEW.md`.
-- D3: leaning GongRzhe 1.1.11 with the mitigations above; final call after smoke test at Task 4 start.
-- Per-group vs per-flagged-email: spec says live notification per **group** (to the latest), but `.eml` drafts for **all flagged** duplicates. Proposal: follow both literally.
-- How the template's `Date:` / `References:` headers survive a live send (`01_OVERVIEW.md` gotcha 4).
+- None.

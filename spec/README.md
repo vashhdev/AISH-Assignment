@@ -31,5 +31,5 @@ Deadline: 1 day from receipt.
 | 1 | Data extraction pipeline | Done | 22,352 / 23,554 parsed (94.9%), 1,202 logged failures, 30 tests. OAuth keys for Task 4 in `~/.gmail-mcp/` (Desktop app type, verified). |
 | 2 | Database storage | Done | SQLite `output/enron.db`: 22,352 emails, 11,739 addresses, 164,473 recipient links. Idempotent reload. 9 sample queries verified. 37 tests. |
 | 3 | Duplicate detection & flagging | Done | 3,939 groups, 8,484 flagged, avg group size 3.15. `duplicates_report.csv` at root. Idempotent. 50 tests. |
-| 4 | MCP notification emails | Not started | |
+| 4 | MCP notification emails | Done | 8,484 drafts; 5 live sends via pipeline + 1 via Claude Code prompt, all received. 65 tests. |
 | 5 | Docs + deliverables wrap-up | Not started | README.md, AI_USAGE.md, final checklist |
