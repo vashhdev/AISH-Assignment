@@ -27,6 +27,5 @@ venv/
 # Original assignment brief (content lives in spec/)
 R2 - Take Home Assignment.docx
 
-# MCP server stderr log and local AI tool settings
+# MCP server stderr log
 output/mcp_server.log
-.claude/settings.local.json
